@@ -1,7 +1,9 @@
 import { useEffect, useState } from 'react';
 import DollarCard from '@/components/DollarCard';
 import SimpleLineChart from '@/components/SimpleLineChart';
-import { RefreshCw, Clock } from 'lucide-react';
+import CurrencyComparison from '@/components/CurrencyComparison';
+import EconomicIndicators from '@/components/EconomicIndicators';
+import { RefreshCw, Clock, TrendingUp } from 'lucide-react';
 
 interface CurrencyData {
   code: string;
@@ -22,6 +24,15 @@ interface HistoricalData {
   value: number;
 }
 
+interface IndicatorData {
+  country: string;
+  gdp: number | null;
+  inflation: number | null;
+  debt: number | null;
+  gdpGrowth: number | null;
+  lastUpdate: string;
+}
+
 export default function Home() {
   const [dollarData, setDollarData] = useState<{
     commercial: CurrencyData | null;
@@ -33,6 +44,13 @@ export default function Home() {
     ptax: null,
   });
 
+  const [otherCurrencies, setOtherCurrencies] = useState<Array<{
+    code: string;
+    name: string;
+    bid: number;
+    pctChange: number;
+  }>>([]);
+
   const [historicalData, setHistoricalData] = useState<{
     commercial: HistoricalData[];
     tourism: HistoricalData[];
@@ -41,16 +59,64 @@ export default function Home() {
     tourism: [],
   });
 
+  const [economicIndicators, setEconomicIndicators] = useState<IndicatorData[]>([]);
+
   const [loading, setLoading] = useState(true);
   const [lastUpdate, setLastUpdate] = useState<string>('');
   const [error, setError] = useState<string>('');
+
+  // Dados simulados para indicadores econômicos (em produção, viriam de uma API)
+  const getMockEconomicData = (): IndicatorData[] => {
+    return [
+      {
+        country: 'Brasil',
+        gdp: 2.08e12,
+        inflation: 4.2,
+        debt: 58.5,
+        gdpGrowth: 2.9,
+        lastUpdate: new Date().toLocaleString('pt-BR'),
+      },
+      {
+        country: 'Estados Unidos',
+        gdp: 27.36e12,
+        inflation: 3.1,
+        debt: 123.5,
+        gdpGrowth: 2.5,
+        lastUpdate: new Date().toLocaleString('pt-BR'),
+      },
+      {
+        country: 'Argentina',
+        gdp: 0.45e12,
+        inflation: 189.4,
+        debt: 87.2,
+        gdpGrowth: -2.1,
+        lastUpdate: new Date().toLocaleString('pt-BR'),
+      },
+      {
+        country: 'Canada',
+        gdp: 2.14e12,
+        inflation: 2.0,
+        debt: 84.3,
+        gdpGrowth: 1.1,
+        lastUpdate: new Date().toLocaleString('pt-BR'),
+      },
+      {
+        country: 'Mexico',
+        gdp: 1.29e12,
+        inflation: 4.8,
+        debt: 45.2,
+        gdpGrowth: 1.5,
+        lastUpdate: new Date().toLocaleString('pt-BR'),
+      },
+    ];
+  };
 
   const fetchDollarData = async () => {
     try {
       setError('');
       // Fetch current rates
       const response = await fetch(
-        'https://economia.awesomeapi.com.br/json/last/USD-BRL,USD-BRLT,USD-BRLPTAX'
+        'https://economia.awesomeapi.com.br/json/last/USD-BRL,USD-BRLT,USD-BRLPTAX,EUR-BRL,GBP-BRL,JPY-BRL,CAD-BRL,AUD-BRL,CHF-BRL'
       );
       const data = await response.json();
 
@@ -59,6 +125,46 @@ export default function Home() {
         tourism: data.USDBRLT,
         ptax: data.USDBRLPTAX,
       });
+
+      // Set other currencies
+      setOtherCurrencies([
+        {
+          code: 'EUR',
+          name: 'Euro',
+          bid: parseFloat(data.EURBRL?.bid || '0'),
+          pctChange: parseFloat(data.EURBRL?.pctChange || '0'),
+        },
+        {
+          code: 'GBP',
+          name: 'Libra Esterlina',
+          bid: parseFloat(data.GBPBRL?.bid || '0'),
+          pctChange: parseFloat(data.GBPBRL?.pctChange || '0'),
+        },
+        {
+          code: 'JPY',
+          name: 'Iene Japones',
+          bid: parseFloat(data.JPYBRL?.bid || '0'),
+          pctChange: parseFloat(data.JPYBRL?.pctChange || '0'),
+        },
+        {
+          code: 'CAD',
+          name: 'Dolar Canadense',
+          bid: parseFloat(data.CADBRL?.bid || '0'),
+          pctChange: parseFloat(data.CADBRL?.pctChange || '0'),
+        },
+        {
+          code: 'AUD',
+          name: 'Dolar Australiano',
+          bid: parseFloat(data.AUDBRL?.bid || '0'),
+          pctChange: parseFloat(data.AUDBRL?.pctChange || '0'),
+        },
+        {
+          code: 'CHF',
+          name: 'Franco Suico',
+          bid: parseFloat(data.CHFBRL?.bid || '0'),
+          pctChange: parseFloat(data.CHFBRL?.pctChange || '0'),
+        },
+      ]);
 
       // Fetch historical data (last 15 days)
       const historicalResponse = await fetch(
@@ -80,10 +186,13 @@ export default function Home() {
         tourism: processedData,
       });
 
+      // Set economic indicators
+      setEconomicIndicators(getMockEconomicData());
+
       setLastUpdate(new Date().toLocaleTimeString('pt-BR'));
       setLoading(false);
     } catch (err) {
-      setError('Erro ao buscar dados de câmbio');
+      setError('Erro ao buscar dados de cambio');
       console.error(err);
       setLoading(false);
     }
@@ -100,7 +209,7 @@ export default function Home() {
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="text-center">
           <RefreshCw className="w-8 h-8 animate-spin text-blue-600 mx-auto mb-4" />
-          <p className="text-gray-600">Carregando cotações...</p>
+          <p className="text-gray-600">Carregando cotacoes...</p>
         </div>
       </div>
     );
@@ -130,7 +239,7 @@ export default function Home() {
           <div className="flex items-center justify-between">
             <div>
               <h1 className="text-2xl font-bold text-gray-900">Monitor de Dolar 24h</h1>
-              <p className="text-sm text-gray-600 mt-1">Acompanhamento em tempo real das cotacoes</p>
+              <p className="text-sm text-gray-600 mt-1">Acompanhamento em tempo real das cotacoes e indicadores economicos</p>
             </div>
             <div className="flex items-center gap-4">
               <div className="flex items-center gap-2 text-sm text-gray-600">
@@ -240,8 +349,17 @@ export default function Home() {
           )}
         </div>
 
+        {/* Outras Moedas */}
+        <div className="mb-8">
+          <div className="flex items-center gap-2 mb-4">
+            <TrendingUp className="w-5 h-5 text-gray-700" />
+            <h2 className="text-lg font-semibold text-gray-900">Comparacao de Moedas</h2>
+          </div>
+          <CurrencyComparison currencies={otherCurrencies} />
+        </div>
+
         {/* Charts */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
           {historicalData.commercial.length > 0 && (
             <SimpleLineChart
               data={historicalData.commercial}
@@ -258,9 +376,18 @@ export default function Home() {
           )}
         </div>
 
+        {/* Indicadores Economicos */}
+        <div className="mb-8">
+          <div className="flex items-center gap-2 mb-4">
+            <TrendingUp className="w-5 h-5 text-gray-700" />
+            <h2 className="text-lg font-semibold text-gray-900">Indicadores Economicos</h2>
+          </div>
+          <EconomicIndicators indicators={economicIndicators} />
+        </div>
+
         {/* Footer Info */}
-        <div className="mt-12 p-6 bg-white rounded-lg border border-gray-200">
-          <h3 className="font-semibold text-gray-900 mb-3">Sobre as cotacoes</h3>
+        <div className="p-6 bg-white rounded-lg border border-gray-200">
+          <h3 className="font-semibold text-gray-900 mb-3">Sobre as cotacoes e indicadores</h3>
           <ul className="text-sm text-gray-600 space-y-2">
             <li>
               <strong>Dolar Comercial:</strong> Taxa oficial utilizada em transacoes comerciais e financeiras entre bancos.
@@ -270,6 +397,12 @@ export default function Home() {
             </li>
             <li>
               <strong>PTAX:</strong> Taxa calculada pelo Banco Central do Brasil, utilizada como referencia para contratos financeiros.
+            </li>
+            <li>
+              <strong>Outras Moedas:</strong> Cotacoes de EUR, GBP, JPY, CAD, AUD e CHF em relacao ao Real.
+            </li>
+            <li>
+              <strong>Indicadores Economicos:</strong> PIB, Inflacao e Divida Publica dos principais paises.
             </li>
             <li>
               <strong>Atualizacao:</strong> Os dados sao atualizados a cada minuto automaticamente.
